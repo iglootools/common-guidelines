@@ -11,6 +11,7 @@ Guidelines to follow when setting up new projects.
 ### All Projects:
 - `renovate.json`
 - Github build/test/release workflows
+- `git config user.email "<email>"` and `git config user.name "<name>"` in the project.
 
 ### Python Projects
 - Build tool: poetry with poetry-dynamic-versioning
