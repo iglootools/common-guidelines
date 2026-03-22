@@ -25,6 +25,7 @@ Guidelines to follow when setting up new projects.
 Consider providing:
 - `asciinema` demo
 - auto-generated `clidocs`/`clidocs-check` tasks for CLI documentation
+- Provide preflight checks wherever applicable and troubleshooting instructions with the specific commands that need to be executed to fix the problem.
 
 ## IDE
 
