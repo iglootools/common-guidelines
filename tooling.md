@@ -20,6 +20,7 @@ Guidelines to follow when setting up new projects.
 - Consider providing:
   - `configdocs`/`configdocs-check`, and `depgraph`/`depgraph-check` tasks for config and dependency documentation, respectively
   - `format`, `lint`, `type-check`, `compat-check` tasks for code quality checks
+- Preferably print to the console using the [Rich](https://github.com/textualize/rich) library that is bundled with [Typer](https://typer.tiangolo.com/)
 
 ### CLI Projects
 Consider providing:
