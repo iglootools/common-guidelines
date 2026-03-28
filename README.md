@@ -4,6 +4,7 @@ Shared coding guidelines for [iglootools](https://github.com/iglootools) project
 
 ## Contents
 
+- [philosophy.md](philosophy.md) — the reasoning behind the guidelines
 - [coding.md](coding.md) — language-agnostic coding principles
 - [python.md](python.md) — Python-specific coding guidelines
 - [tooling.md](tooling.md) — GitHub Workflows, project setup, IDE configuration

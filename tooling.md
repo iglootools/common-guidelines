@@ -1,5 +1,7 @@
 # Tooling Guidelines
 
+See [philosophy.md](philosophy.md) for the reasoning behind these guidelines.
+
 ## GitHub Workflows
 - Whenever safe (i.e. not affecting production), enable `workflow_dispatch` and `repository_dispatch` to allow manual triggering of workflows from the GitHub UI or CLI, which is useful for testing and debugging.
 - Use OpenID Connect (OIDC) authentication for publishing to PyPI, and set up a separate workflow for testing releases to Test PyPI. This allows testing the release and publish process without affecting the real PyPI index, and provides more detailed logs for debugging.
