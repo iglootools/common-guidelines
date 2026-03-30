@@ -1,7 +1,12 @@
 # Philosophy
 
-This document describes the general philosophy that underpins the [coding guidelines](coding.md). 
-The guidelines are the concrete rules; this is the reasoning behind them.
+This document describes the general philosophy that underpins the [coding guidelines](coding.md).
+The guidelines are meant to be practical and actionable; this is the reasoning behind them.
+
+These are defaults, not dogma. 
+If there are good reasons to deviate — performance constraints, ecosystem conventions, third-party library limitations — 
+each project or module should document the exceptions and the reasoning behind them. 
+An explicit, justified exception is fine; a silent drift is not.
 
 ## Workflow
 
@@ -25,20 +30,13 @@ Humans should not have to remember to run the formatter or check for lint errors
 the system should enforce standards so that code review can focus on design and correctness, not style. 
 The same applies to environment setup, data seeding, and deployment: every manual step is a step that will eventually be skipped or done wrong.
 
-Further reading on coding philosophy:
-- [A Philosophy of Software Design](https://web.stanford.edu/~ouster/cgi-bin/book.php) by John Ousterhout
-- [Simple Made Easy](https://www.infoq.com/presentations/Simple-Made-Easy/) by Rich Hickey (talk)
-- [The Value of Values](https://www.infoq.com/presentations/Value-Values/) by Rich Hickey (talk)
-- [Out of the Tar Pit](http://curtclifton.net/papers/MosesSchonworkerTarPit.pdf) by Moseley & Marks (paper)
-
-
 ### Do fewer things, do them completely
 
 **Shipping one fully finished feature is better than shipping three half-done ones.** 
 Half-done features accumulate unhandled corner cases that are hard to reason about, 
 cause things to break while building something else, and erode trust in the system.
 
-A feature that works but lacks tests, docs, and error handling is unfinished — it just has the illusion of progress.
+A feature that works but lacks tests, docs, and error handling is unfinished — it just has the illusion of progress. Fix bugs before implementing new features.
 Resist the temptation to chase "low-hanging fruit" — a backlog full of quick wins that are each 20% done is worse than a short list of things done properly. 
 Reduce scope aggressively so that what you do ship meets the full bar of quality. 
 This applies to sprints, pull requests, and individual commits: each unit of work should be complete, not just functional.
@@ -77,6 +75,18 @@ Further reading on workflow and craft:
 
 
 ## Architecture and System Design
+
+### Task-driven interfaces, not CRUD
+
+Design APIs, CLIs, and UIs around the tasks users actually perform — not around the shape of the data model. 
+No CRUD-style endpoints that accept and return a bag of properties as a meaningless chunk. 
+Each command or mutation should represent a specific intent with precise inputs, precise outputs, and precise error handling. 
+If an operation can fail in three distinct ways, the interface should surface three distinct errors — not a generic 400.
+
+Always implement a CLI as the first client. This is a forcing function for two things: 
+- Task-driven design (User-friendly CLIs don't tolerate passing big JSON blobs — you need precise flags and subcommands)
+- Maintaining an API client that exposes all errors explicitly as values. 
+If the CLI can't express an operation cleanly, the underlying API is too coarse.
 
 ### High cohesion, low coupling — at every boundary
 
@@ -222,3 +232,8 @@ When binary formats or databases are necessary, invest in tooling that makes the
 structured logging.
 The goal is that no part of the system should be a black box: anyone should be able to understand what happened and why without reverse-engineering the storage format.
 
+Further reading on coding philosophy:
+- [A Philosophy of Software Design](https://web.stanford.edu/~ouster/cgi-bin/book.php) by John Ousterhout
+- [Simple Made Easy](https://www.infoq.com/presentations/Simple-Made-Easy/) by Rich Hickey (talk)
+- [The Value of Values](https://www.infoq.com/presentations/Value-Values/) by Rich Hickey (talk)
+- [Out of the Tar Pit](http://curtclifton.net/papers/MosesSchonworkerTarPit.pdf) by Moseley & Marks (paper)
