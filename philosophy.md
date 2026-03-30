@@ -10,6 +10,17 @@ An explicit, justified exception is fine; a silent drift is not.
 
 ## Workflow
 
+### Async by default
+
+**Do your homework before requesting someone's time.**
+
+Synchronous communication — meetings, calls, shoulder taps — should be the exception, not the default.
+Before raising a discussion, prepare a design doc: define the problem, evaluate alternatives, and present a recommendation.
+Then request async feedback. This respects everyone's focus time, produces a written record that others can review on their own schedule,
+and forces clearer thinking — writing exposes gaps that talking glosses over.
+
+Reserve synchronous discussions for genuinely ambiguous situations where real-time back-and-forth will resolve things faster than another round of written comments.
+
 ### Shorten every feedback loop
 
 **The faster you can see the effect of a change, the faster you can iterate.**
