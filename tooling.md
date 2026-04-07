@@ -11,7 +11,9 @@ See [philosophy.md](philosophy.md) for the reasoning behind these guidelines.
 Guidelines to follow when setting up new projects.
 
 ### All Projects:
-- `renovate.json`
+- `renovate.json`: group all dependency updates into a single PR, delay
+  updates by 14 days (`minimumReleaseAge`) to avoid adopting broken
+  releases and limit risk of supply chain attacks
 - Github build/test/release workflows
 - `git config user.email "<email>"` and `git config user.name "<name>"` in the project.
 
