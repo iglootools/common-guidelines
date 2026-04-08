@@ -102,7 +102,7 @@ If the CLI can't express an operation cleanly, the underlying API is too coarse.
 ### High cohesion, low coupling — at every boundary
 
 Draw boundaries so that related things live together and unrelated things communicate through narrow, explicit interfaces. 
-This applies to functions, modules, packages, and repositories alike.
+This applies to functions, modules, packages, repositories, and teams alike.
 
 A monorepo that lumps everything together does not solve coupling — it hides it. 
 Conversely, splitting into many repos with tangled dependencies just distributes the monolith across git remotes, 
@@ -111,6 +111,10 @@ requiring coordinated PRs in five places for every feature.
 The goal is that 80% of changes affect a single repository — not because everything is in one place, but because dependencies are handled mindfully. 
 Each unit should own a coherent slice of the domain, expose a stable contract, and evolve independently. 
 When a change routinely fans out across many boundaries, the boundaries are in the wrong place.
+
+The same logic applies to team structure: a team should own a coherent slice of the system end-to-end, 
+with minimal cross-team coordination needed for most changes. 
+If every feature requires syncing across multiple teams and technical boundaries, the ownership boundaries are in the wrong place.
 
 ### Event-driven, append-only, replayable
 
