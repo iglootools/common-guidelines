@@ -13,6 +13,8 @@ a rationale has to meet.
 **Functional Style**:
 - Prefer functional programming style over procedural style. Use pure functions and avoid mutability when possible.
 
+**Function size**: Keep functions short and focused. When a function grows beyond ~30 lines or handles multiple concerns (e.g. scanning, processing, and persisting), extract named helpers. Each function should do one thing at one level of abstraction. Prefer reading like a high-level outline that delegates to well-named helpers over a single long procedure.
+
 **Code comments**: When making changes to the codebase, explain the reasoning when the implementation is non-obvious, and document any non-trivial design decisions or trade-offs that were made.
 
 **Charsets**:
