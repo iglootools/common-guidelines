@@ -3,10 +3,40 @@
 This document describes the general philosophy that underpins the [coding guidelines](coding.md).
 The guidelines are meant to be practical and actionable; this is the reasoning behind them.
 
+## Applying These Guidelines
+
 These are defaults, not dogma. 
 If there are good reasons to deviate — performance constraints, ecosystem conventions, third-party library limitations — 
 each project or module should document the exceptions and the reasoning behind them. 
 An explicit, justified exception is fine; a silent drift is not.
+
+**A major reason to write the rationale down is so the exception can be re-evaluated later.** 
+Almost every exception is a response to a condition that is true at the time: a library that lacks a feature, 
+a performance constraint, an ecosystem convention, a platform or version we still support. 
+Those conditions expire. When the library ships the feature, the bottleneck moves, or the version is dropped, 
+a documented exception can be revisited and removed — an undocumented one silently becomes permanent, 
+because nobody is left who remembers what it was working around. 
+Undocumented exceptions are how a codebase accumulates rules that everyone follows and no one can explain.
+
+So where the exception depends on a condition, **name the condition that would make it unnecessary**, 
+not just the reason it exists today. "Revisit when X supports Y" or "drop this once we no longer support Z" 
+gives the exception an expiry criterion someone can actually check, instead of leaving a future reader to guess 
+whether the justification still holds. The [Python version policy](python.md#python-version-policy) is the shape 
+to copy: it records the constraint, what it costs, and the specific event that would retire it.
+
+**Where to document an exception** — put it where a reader will hit it, not in a separate log:
+
+- **Project-wide deviations** go in the project's `docs/guidelines.md`, stated against the rule they override.
+- **Local or config-level deviations** go in a comment at the point of deviation — a `[tool.ruff.lint] ignore`
+  entry paired with the design decision that motivates it, a `# noqa` with its reason beside it, a comment above
+  the constraint in `pyproject.toml`.
+
+**The bar is a rationale a reviewer would accept**, not merely a note that the deviation exists.
+"We ignore this rule" is drift. "We ignore this rule because X, and here is what we do instead" is an exception.
+If the reason is "we have not gotten around to it", that is debt to track, not an exception to document.
+
+The same standard applies between projects: two iglootools projects may legitimately differ, but the difference
+should be traceable to a decision someone made, not to one of them having quietly fallen behind.
 
 ## Workflow
 
