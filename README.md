@@ -15,8 +15,15 @@ Every rule here is a default recommendation. A project is free to deviate, or to
 own, **provided the deviation and the reasoning behind it are documented** — project-wide ones in the
 project's `docs/guidelines.md`, local ones in a comment at the point of deviation.
 
-Divergence for a good, documented reason is fine. Drift without one is not. See
-[Applying These Guidelines](philosophy.md#applying-these-guidelines) for where exceptions belong and
+Divergence for a good, documented reason is fine. Drift without one is not.
+
+A major reason to insist on the written rationale is that it makes the exception **re-evaluatable**.
+Most exceptions answer a condition that is true at the time — a library gap, a performance constraint, a
+version we still support — and those conditions expire. Where one does, name the condition that would
+retire the exception ("drop this once we no longer support Z"), so a future reader can check whether the
+justification still holds instead of guessing. Undocumented exceptions become permanent by default.
+
+See [Applying These Guidelines](philosophy.md#applying-these-guidelines) for where exceptions belong and
 the bar a rationale has to meet.
 
 ## Usage with Claude Code

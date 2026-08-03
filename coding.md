@@ -5,7 +5,9 @@ See [philosophy.md](philosophy.md) for the reasoning behind these guidelines.
 **These are defaults, not dogma.** A project is free to deviate from any rule here, or add its own,
 as long as the deviation and its rationale are documented — project-wide ones in the project's
 `docs/guidelines.md`, local ones in a comment at the point of deviation. A justified exception is fine;
-silent drift is not. See [Applying These Guidelines](philosophy.md#applying-these-guidelines) for the bar
+silent drift is not. Where the exception depends on a condition that may change, name the condition that
+would retire it — a written rationale is what lets the exception be re-evaluated later instead of becoming
+permanent by default. See [Applying These Guidelines](philosophy.md#applying-these-guidelines) for the bar
 a rationale has to meet.
 
 **Functional Style**:
