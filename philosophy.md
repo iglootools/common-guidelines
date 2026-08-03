@@ -3,10 +3,26 @@
 This document describes the general philosophy that underpins the [coding guidelines](coding.md).
 The guidelines are meant to be practical and actionable; this is the reasoning behind them.
 
+## Applying These Guidelines
+
 These are defaults, not dogma. 
 If there are good reasons to deviate — performance constraints, ecosystem conventions, third-party library limitations — 
 each project or module should document the exceptions and the reasoning behind them. 
 An explicit, justified exception is fine; a silent drift is not.
+
+**Where to document an exception** — put it where a reader will hit it, not in a separate log:
+
+- **Project-wide deviations** go in the project's `docs/guidelines.md`, stated against the rule they override.
+- **Local or config-level deviations** go in a comment at the point of deviation — a `[tool.ruff.lint] ignore`
+  entry paired with the design decision that motivates it, a `# noqa` with its reason beside it, a comment above
+  the constraint in `pyproject.toml`.
+
+**The bar is a rationale a reviewer would accept**, not merely a note that the deviation exists.
+"We ignore this rule" is drift. "We ignore this rule because X, and here is what we do instead" is an exception.
+If the reason is "we have not gotten around to it", that is debt to track, not an exception to document.
+
+The same standard applies between projects: two iglootools projects may legitimately differ, but the difference
+should be traceable to a decision someone made, not to one of them having quietly fallen behind.
 
 ## Workflow
 
