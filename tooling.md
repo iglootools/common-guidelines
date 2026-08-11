@@ -91,8 +91,34 @@ Expect `0 errors`. With `--verbose`, the search paths should include
 `.venv/lib/python<X.Y>/site-packages`.
 
 ### VSCode
-- Install the Mise, Ruff, Pylance, and tombi extensions
-    - `.vscode/settings.json`: mise, ruff format-on-save
+- Commit the extension set to `.vscode/extensions.json` so a fresh clone is prompted for it, instead
+  of documenting it in prose that nobody reads before opening the editor:
+
+    ```json
+    {
+        "recommendations": [
+            "ms-python.python",
+            "ms-python.vscode-pylance",
+            "ms-python.vscode-python-envs",
+            "charliermarsh.ruff",
+            "hverlin.mise-vscode",
+            "tombi-toml.tombi"
+        ]
+    }
+    ```
+
+  | Extension | Needed for | Consequence if missing |
+  |---|---|---|
+  | `ms-python.python` | every Python project | no test discovery, debugger, or terminal activation |
+  | `ms-python.vscode-pylance` | every Python project | the language server. Without it the Python extension falls back to Jedi and `[tool.pyright]` is ignored outright |
+  | `ms-python.vscode-python-envs` | projects committing `python-envs.*` settings | owns those keys; without it the committed `pythonProjects` entry does nothing |
+  | `charliermarsh.ruff` | projects using ruff | `editor.defaultFormatter` names it, so format-on-save silently stops working |
+  | `hverlin.mise-vscode` | projects using mise | the `mise.enable` setting has no reader; tasks and tool versions stop surfacing |
+  | `tombi-toml.tombi` | projects with TOML — in practice all of them, via `pyproject.toml` and `mise.toml` | no TOML validation or formatting |
+
+  The rule behind the list: **every extension a committed setting depends on belongs in
+  `extensions.json`.** A setting whose extension is absent is not an error — it is a silent no-op, and
+  the developer who cloned the repo has no way to tell the difference from a working setup.
 - Check the in-project venv into `.vscode/settings.json` rather than relying on each developer
   running **Python: Select Interpreter**:
 
