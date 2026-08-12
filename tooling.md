@@ -194,8 +194,40 @@ Guidelines to follow when setting up new projects.
   - `format`, `lint`, `type-check`, `compat-check` tasks for code quality checks
   - `lock-check` and `lock-check-uv` (`uv lock --check`) tasks. These assert different things:
     `uv lock --check` asks whether the lock is consistent with the manifest, while `UV_LOCKED` in
-    CI asks whether a sync would *change* it. Invoke `lock-check` with `mise run --no-deps`,
-    since it deliberately reverts `mise.toml` while it runs.
+    CI asks whether a sync would *change* it.
+
+    `mise.lock` has no `--check` equivalent, so that one has to regenerate and compare — and it
+    should do so **in a scratch copy, never in place**:
+
+    ```toml
+    run = """
+    set -eu
+    tmp=$(mktemp -d)
+    trap 'rm -rf "$tmp"' EXIT
+
+    git show :mise.toml > "$tmp/mise.toml"
+    git show :mise.lock > "$tmp/staged.lock"
+    cp "$tmp/staged.lock" "$tmp/mise.lock"
+    ( cd "$tmp" && MISE_TRUSTED_CONFIG_PATHS="$tmp" env -u MISE_PYTHON_VERSION mise lock )
+
+    if ! diff -u "$tmp/staged.lock" "$tmp/mise.lock" >&2; then
+      echo "mise.lock is out of date. Run 'mise lock' and commit the result." >&2
+      exit 1
+    fi
+    """
+    ```
+
+    Each line of that is load-bearing, and the reasons are not guessable:
+
+    | Detail | Why |
+    |---|---|
+    | regenerate in `$tmp` | `mise lock` always writes. Letting it write the real lockfile means undoing it afterwards, and a `git checkout mise.lock` to do so **discards the regenerated file the error message just told you to commit** |
+    | inputs from the index (`git show :<file>`) | mise rewrites `mise.lock` on its own: with `lockfile = true`, any tool-resolving command updates the version stanza and drops the per-platform checksums it can no longer vouch for — which is exactly the state that makes `mise install --locked` fail on a fresh runner. The working copy is therefore not a stable reference, so "up to date" can only mean "matches what is staged". It also makes the check immune to CI's `mise use python@<matrix>`, which rewrites the working `mise.toml` |
+    | `env -u MISE_PYTHON_VERSION` | `mise lock` honours it, so an env-selected matrix interpreter would otherwise be locked in place of the committed pin |
+    | `set -eu` | without it a failing `mise lock` leaves the copied lockfile untouched, the `diff` finds no difference, and the check **passes** — the guard defeated by the situation it exists to catch |
+
+    Note that mise tasks run under POSIX `sh`, not bash: `<(...)` process substitution is a
+    syntax error there, and one that did not reliably fail the task.
   - a `reinstall` task that deletes `.venv` and reinstalls from scratch. Most of what this used
     to be for is gone: `uv sync` is exact by default, so it removes packages present in neither
     `pyproject.toml` nor `uv.lock`, and the `UV_PYTHON` pin above is what picks up a raised
