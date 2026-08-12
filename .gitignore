@@ -1,0 +1,4 @@
+# macOS
+#   Kept in the committed .gitignore rather than .git/info/exclude or a personal
+#   core.excludesfile, neither of which is shared on clone.
+.DS_Store
