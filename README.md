@@ -8,6 +8,9 @@ Shared coding guidelines for [iglootools](https://github.com/iglootools) project
 - [coding.md](coding.md) — language-agnostic coding principles
 - [python.md](python.md) — Python-specific coding guidelines
 - [tooling.md](tooling.md) — GitHub Workflows, project setup, IDE configuration
+- [scripts/](scripts/) — reference implementations to copy into a project, for the few cases where
+  a guideline is easier to ship as working code than to describe. The guideline that motivates each
+  one links to it, and explains why every line is there.
 
 ## These are defaults, not dogma
 
