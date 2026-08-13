@@ -40,9 +40,9 @@ Projects target **two** Python versions at once:
 ### Why 3.12 is the floor
 
 Ubuntu 24.04 LTS ships Python 3.12 as its system `python3`. Keeping the floor there
-means users on the previous LTS can `pipx install` a tool without adding a PPA,
-building Python from source, or upgrading the distro. Nothing in the code may use a
-feature newer than 3.12, even though development happens on 3.14.
+means users on the previous LTS can `uv tool install` (or `pipx install`) a tool without
+adding a PPA, building Python from source, or upgrading the distro. Nothing in the code
+may use a feature newer than 3.12, even though development happens on 3.14.
 
 > **Considering moving the floor to 3.14 soon.** Ubuntu 26.04 LTS ships Python 3.14
 > (upgraded directly from 3.12 — 26.04 skips 3.13). Once we no longer need to support

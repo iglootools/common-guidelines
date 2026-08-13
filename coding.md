@@ -30,12 +30,21 @@ a rationale has to meet.
 - Do not hardcode indents in strings, compute the indent at the call site
 
 **Version Management**
-- Pin specific versions of all dependencies or use a lock file (e.g. poetry.lock) to ensure reproducible builds and avoid issues with breaking changes in dependencies.
+- Pin specific versions of all dependencies or use a lock file (e.g. `uv.lock`, `mise.lock`) to ensure reproducible builds and avoid issues with breaking changes in dependencies.
 
   ```bash
   # examples
-  mise use --pin pipx:poetry
+  mise use --pin uv@0.12.3
   ```
+- A lock file only helps if something asserts that the environment matches it. Provide both
+  assertions, because they catch different failures: `uv lock --check` asks whether the lock is
+  consistent with the manifest, while `UV_LOCKED=1` in CI asks whether installing would *change*
+  the lock. Prefer the environment variable over a `--locked` flag on the command, so the install
+  command stays identical locally and in CI and only the strictness differs.
+- Watch for pins that no updater reads. `[tool.uv] build-constraint-dependencies` is the clearest
+  example: `uv.lock` does not cover PEP 517 build dependencies, and no built-in Renovate or
+  Dependabot manager parses that field, so those pins rot silently unless a custom manager is
+  added for them. A pin nothing updates is a pin nothing tells you about.
 
 **Command Line**
 - When calling external commands, build the command lines as lists of arguments instead of strings to avoid issues with quoting and escaping.
