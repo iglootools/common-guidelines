@@ -30,10 +30,30 @@ Guidelines to follow when setting up new projects.
 - `renovate.json`: group all dependency updates into a single PR, delay
   updates by 14 days (`minimumReleaseAge`) to avoid adopting broken
   releases and limit risk of supply chain attacks
-- **Split Renovate and Dependabot by job, not by ecosystem.** Running both on version updates
-  produces duplicate PRs, and Dependabot's half bypasses the 14-day delay above. Give Renovate
-  all routine version updates — it also covers what Dependabot has no manager for, such as
-  `mise.toml` and `customManagers` regex entries — and declare Dependabot security-only:
+- **Split Renovate and Dependabot by job, not by ecosystem.**
+
+  The 14-day delay above is a supply-chain measure: it protects you from a release that turns out
+  to be broken or malicious, and it works by waiting. Waiting is exactly the wrong response to a
+  published advisory, where the fix is already known and every day of delay is another day of
+  exposure.
+
+  One tool cannot be both slow and immediate, so give the two tools opposite latencies:
+
+  | Tool | Handles | Latency |
+  |---|---|---|
+  | Renovate | routine version updates, grouped into one PR | delayed 14 days (`minimumReleaseAge`) |
+  | Dependabot | security updates only | immediate |
+
+  Renovate takes the routine half because it is also the only one of the two with managers for
+  `mise.toml` and `customManagers` regex entries. Dependabot takes the security half because its
+  advisory-driven updates are exempt from delay.
+
+  Do **not** let both do version updates. That produces duplicate PRs, and Dependabot's half
+  ignores the 14-day delay — quietly defeating the measure the delay exists for.
+
+  `open-pull-requests-limit: 0` is what implements the split. It is GitHub's documented way to
+  switch off *version* updates for an ecosystem, and security PRs are exempt from it (and from
+  `cooldown`), so setting it to zero leaves exactly the security half running:
 
   ```yaml
   updates:
@@ -43,12 +63,6 @@ Guidelines to follow when setting up new projects.
         interval: "weekly"
       open-pull-requests-limit: 0
   ```
-
-  `open-pull-requests-limit: 0` is the documented way to disable *version* updates, and security
-  PRs are exempt from both it and `cooldown`. That division is the point: a deliberate
-  `minimumReleaseAge` delay is a supply-chain measure, and it is exactly the wrong response to a
-  published advisory — so the delayed tool handles routine upgrades and the immediate one handles
-  vulnerabilities.
 
   **`package-ecosystem` must track the build tool.** A stale value fails *silently*: `pip` reads
   `poetry.lock` and understands neither `uv.lock` nor `[dependency-groups]`, so after a migration
