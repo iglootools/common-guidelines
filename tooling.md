@@ -353,9 +353,85 @@ Expect `0 errors`. With `--verbose`, the search paths should include
   key is left to default to `python-envs.defaultPackageManager` (`:pip`), which is inaccurate but
   inert: it drives only the extension's own install/uninstall UI, not interpreter resolution or type
   checking. Re-add it once the extension registers a uv package manager.
+- **Let `hverlin.mise-vscode` write the other tools' paths, but fence it in.** Every extension that
+  needs a toolchain binary has its own key (`metals.javaHome`, `deno.path`, `go.goroot`, …), and
+  hand-maintaining them against `mise.toml` is exactly the kind of duplication that drifts:
+
+    ```json
+    {
+        "mise.enable": true,
+        "mise.configureExtensionsAutomatically": true,
+        "mise.configureExtensionsUseSymLinks": true,
+        "mise.configureExtensionsIncludeGlobalTools": false
+    }
+    ```
+
+  | Setting | Non-default? | Why |
+  |---|---|---|
+  | `configureExtensionsAutomatically` | yes (`false`) | derives the per-extension tool keys from `mise.toml` instead of leaving them to be typed once and forgotten |
+  | `configureExtensionsUseSymLinks` | yes (`false`) | writes `${workspaceFolder}/.vscode/mise-tools/<tool>` rather than an absolute `~/.local/share/mise/installs/…` path. Only the symlink form is shareable: an absolute install path is version-specific and home-directory-specific, so committing it hands every other developer a path that does not exist on their machine |
+  | `configureExtensionsIncludeGlobalTools` | yes (`true`) | restricts configuration to tools the project's own `mise.toml` declares. The extension's own documentation calls `false` the recommended value, and the failure it prevents is visible in practice: a Nuxt repo declaring only `node` and `pnpm` acquired `metals.javaHome` and a `python.defaultInterpreterPath` pointing at a global mise interpreter, purely because those tools were in `~/.config/mise/config.toml` |
+
+  Because the symlinks are per-machine, **`.vscode/mise-tools/` must be in the committed
+  `.gitignore`** — the extension's documentation makes this a condition of sharing the settings
+  file at all. The [All Projects](#all-projects) rule applies unchanged: ignoring it only in
+  `.git/info/exclude` looks like coverage to whoever set it up and gives none to anyone else.
+
+  **This does not replace the explicit `.venv` pin above, and must not be read as doing so.** For
+  `ms-python.python` the extension prefers mise's `VIRTUAL_ENV` and writes
+  `${workspaceFolder}/.venv/bin/python` — the same value, so the two agree. But it *falls back* to
+  the mise toolchain interpreter when `VIRTUAL_ENV` is absent, which is precisely the state of a
+  fresh clone: the first `mise install` deliberately does not create `.venv` (see
+  [Mise + uv](#python-projects)). Generated-only, that window writes a python with none of the
+  project's dependencies into a committed file. Keeping `python.defaultInterpreterPath` written out
+  by hand makes the generated value a confirmation rather than the sole source.
+- **These settings do not isolate projects in a multi-root workspace** — for that, see
+  [Multi-root workspaces](#multi-root-workspaces) below.
 - After changing interpreter or pyright settings, reload the window (**Developer: Reload Window**).
   Current Pylance releases have no "Python: Restart Language Server" command, and an already-running
   server keeps serving diagnostics from the configuration it started with.
+
+#### Multi-root workspaces
+
+Opening several projects in one `.code-workspace` is where per-project tool configuration is most
+likely to leak across projects, so it is worth being explicit about which mechanisms hold there and
+which do not.
+
+**`mise.*` settings are window-scoped, so a committed `.vscode/settings.json` does not carry into a
+multi-root window.** Checked against `hverlin.mise-vscode` 1.23.0: every `mise.*` key — `mise.enable`
+and all four `configureExtensions*` keys included — declares the default `window` scope. VSCode reads
+window-scoped settings from user, remote and *workspace* settings only; per-folder values are
+ignored. A project that commits `"mise.enable": true` therefore configures itself when opened as a
+single root and configures nothing when it is one folder among several. The setting has to be
+repeated in the `.code-workspace` file's `settings` block, where it applies to every folder at once.
+
+**mise-vscode configures one folder at a time, and writes the result where it applies to all of
+them.** The extension resolves a single "current" workspace folder — whichever was chosen with
+**mise: Select workspace folder**, defaulting to `workspaceFolders[0]` — and writes the generated
+keys at `ConfigurationTarget.Workspace`, which in a multi-root window is the `.code-workspace` file.
+The paths it emits are relative to `${workspaceFolder}`, unqualified. Composed, those three facts
+mean: one folder's tools, expressed with a variable that does not name it, applied to every folder.
+Observed on a seven-folder workspace — a `settings` block sending all seven to
+`${workspaceFolder}/.vscode/mise-tools/python` when only the first folder had that directory, and
+its `python` symlink pointed at a global interpreter rather than any project's `.venv`.
+
+So the practical rule: **turn `configureExtensionsAutomatically` on per project, and let it write
+only in single-folder windows.** When working in a multi-root workspace, do not accept generated
+`settings` in the `.code-workspace` file, and do not commit them — the workspace file is a view onto
+projects, not a place where any one project's toolchain belongs.
+
+**What actually keeps the projects apart** is per-project and does not depend on the mise extension:
+
+| Consumer | Mechanism | Scope |
+|---|---|---|
+| pyright — CLI, CI, Claude Code's LSP | `[tool.pyright] venvPath`/`venv` in each `pyproject.toml` | per project, no VSCode involvement at all |
+| Pylance, test discovery, debugger | `python.defaultInterpreterPath` in the folder's own `.vscode/settings.json` | `machine-overridable`, so a folder-level value overrides the workspace one |
+| terminals and tasks | `uv run --no-sync <tool>`, which resolves from the project root and ignores `PATH` | per invocation |
+
+Each of those is a folder-level or file-level fact, which is why they survive being opened alongside
+other projects; the mise extension's settings are window-level, which is why they do not. Adding the
+`configureExtensions*` keys is worth doing for the toolchains that have no equivalent of `.venv` —
+it is not a substitute for any row of that table.
 
 ### Claude Code
 
