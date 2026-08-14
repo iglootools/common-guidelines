@@ -11,4 +11,6 @@ of becoming permanent by default. See [Applying These Guidelines](philosophy.md#
 
 @coding.md
 @python.md
-@tooling.md
+@project-setup.md
+@python-tooling.md
+@ide.md

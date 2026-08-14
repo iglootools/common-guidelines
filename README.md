@@ -7,7 +7,9 @@ Shared coding guidelines for [iglootools](https://github.com/iglootools) project
 - [philosophy.md](philosophy.md) — the reasoning behind the guidelines, and [how to deviate from them](philosophy.md#applying-these-guidelines)
 - [coding.md](coding.md) — language-agnostic coding principles
 - [python.md](python.md) — Python-specific coding guidelines
-- [tooling.md](tooling.md) — GitHub Workflows, project setup, IDE configuration
+- [project-setup.md](project-setup.md) — GitHub Workflows, dependency automation, new-project setup
+- [python-tooling.md](python-tooling.md) — uv, mise, hatchling, and the mise task set
+- [ide.md](ide.md) — pyright resolution, VSCode, and Claude Code configuration
 - [scripts/](scripts/) — reference implementations to copy into a project, for the few cases where
   a guideline is easier to ship as working code than to describe. The guideline that motivates each
   one links to it, and explains why every line is there.
@@ -36,11 +38,16 @@ Add `@` imports in your project's `CLAUDE.md` (requires this repo cloned as a si
 ```markdown
 @../common-guidelines/coding.md
 @../common-guidelines/python.md
-@../common-guidelines/tooling.md
+@../common-guidelines/project-setup.md
+@../common-guidelines/python-tooling.md
+@../common-guidelines/ide.md
 ```
+
+Import only what a project needs — a non-Python project has no use for `python.md` or
+`python-tooling.md`, and a project with no editor configuration to share can leave out `ide.md`.
 
 `coding.md` carries the "defaults, not dogma" clause, so importing it is enough for the exception
 rule to reach the agent. Add `@../common-guidelines/philosophy.md` too if you want the full reasoning
-in context — it is considerably longer than the other three combined.
+in context — it is considerably longer than all the others combined.
 
 Or add this repository as an additional working directory in Claude Code settings.
