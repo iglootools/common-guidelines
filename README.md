@@ -38,13 +38,26 @@ Add `@` imports in your project's `CLAUDE.md` (requires this repo cloned as a si
 ```markdown
 @../common-guidelines/coding.md
 @../common-guidelines/python.md
-@../common-guidelines/project-setup.md
-@../common-guidelines/python-tooling.md
-@../common-guidelines/ide.md
 ```
 
-Import only what a project needs — a non-Python project has no use for `python.md` or
-`python-tooling.md`, and a project with no editor configuration to share can leave out `ide.md`.
+**Import the two that govern every edit; point at the rest.** An `@` import is loaded into every
+session whether or not the task needs it, so it should be reserved for guidelines that apply to any
+change. `project-setup.md`, `python-tooling.md` and `ide.md` do not: they are triggered by a
+specific file, and a session that never touches that file pays for them anyway. Follow the imports
+with a table naming the trigger, so the agent can tell when to go read one:
+
+```markdown
+| Read | Before touching |
+|---|---|
+| ../common-guidelines/project-setup.md | `.github/workflows/`, `renovate.json`, `dependabot.yml`, `.gitignore` |
+| ../common-guidelines/python-tooling.md | `pyproject.toml`, `mise.toml`, `uv.lock` — or adding a dependency or mise task |
+| ../common-guidelines/ide.md | `.vscode/`, `.claude/settings.json`, `*.code-workspace`, `[tool.pyright]` |
+```
+
+Make the trigger a **path**, not a topic. "When working on packaging" requires the agent to have
+already understood the task as a packaging task; "before touching `pyproject.toml`" is checkable
+against the edit it is about to make. Drop rows for files a project does not have, and drop
+`@python.md` from a non-Python project.
 
 `coding.md` carries the "defaults, not dogma" clause, so importing it is enough for the exception
 rule to reach the agent. Add `@../common-guidelines/philosophy.md` too if you want the full reasoning
