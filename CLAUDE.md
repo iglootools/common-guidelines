@@ -11,4 +11,18 @@ of becoming permanent by default. See [Applying These Guidelines](philosophy.md#
 
 @coding.md
 @python.md
-@tooling.md
+
+The two files above are imported because they govern every edit. The rest are setup- and
+tooling-specific, so they are read when the task reaches them rather than loaded into every
+session — each is triggered by a file you can see you are about to touch:
+
+| Read | Before touching |
+|---|---|
+| [project-setup.md](project-setup.md) | `.github/workflows/`, `renovate.json`, `dependabot.yml`, `.gitignore` — or when setting up a new repository |
+| [python-tooling.md](python-tooling.md) | `pyproject.toml`, `mise.toml`, `uv.lock` — or when adding a dependency, a mise task, or anything about building and publishing |
+| [ide.md](ide.md) | `.vscode/`, `.claude/settings.json`, `*.code-workspace`, `[tool.pyright]` |
+
+Read the whole file, not the section that looks relevant. These guidelines are mostly about
+failures that are silent — a wheel that builds empty, a lockfile check that passes by being
+broken, a setting whose extension is absent — so the part you would have skipped is usually the
+part that names the failure.
