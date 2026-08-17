@@ -23,6 +23,14 @@ for uv, mise and packaging, and [ide.md](ide.md) for editor and Claude Code conf
   accommodate one. The one legitimate use of `install: false` is a workflow that runs on branches
   where `mise.toml` is deliberately ahead of `mise.lock`, such as one that regenerates the lock
   for Renovate branches.
+- **Pair `install: false` with `env: false`.** After setup, `jdx/mise-action` exports mise's
+  `[env]` into the job — and the `UV_PYTHON = "{{ tools.python.path }}"` pin that
+  [python-tooling.md](python-tooling.md#configuration) requires resolves through the *installed*
+  toolset. With nothing installed, the template fails with ``Field `python` is not defined`` and
+  takes the whole setup step down, before the workflow's own steps ever run. The two inputs are
+  therefore a pair, not independent knobs: skipping the install means skipping the export. Nothing
+  is lost, because a lock-regenerating workflow needs the mise binary and the config, not a tool
+  environment.
 - Set `timeout-minutes` on every job. Without it, a hung step (a stalled `apt-get`, a network call that never returns) runs until GitHub's 6-hour default before the job is killed, wasting CI minutes and delaying feedback. A tight job-level guard (e.g. `timeout-minutes: 10`, sized to the job) fails fast and legibly. Prefer a single job-level timeout over per-step timeouts: one guard covers the whole job with no per-step bookkeeping.
 
 ## All Projects
