@@ -117,7 +117,12 @@ that drifts:
     "mise.enable": true,
     "mise.configureExtensionsAutomatically": true,
     "mise.configureExtensionsUseSymLinks": true,
-    "mise.configureExtensionsIncludeGlobalTools": false
+    "mise.configureExtensionsIncludeGlobalTools": false,
+    "mise.configureExtensionsAutomaticallyIgnoreList": [
+        "biomejs.biome",
+        "oxc.oxc-vscode",
+        "ms-python.python"
+    ]
 }
 ```
 
@@ -126,20 +131,53 @@ that drifts:
 | `configureExtensionsAutomatically` | yes (`false`) | derives the per-extension tool keys from `mise.toml` instead of leaving them to be typed once and forgotten |
 | `configureExtensionsUseSymLinks` | yes (`false`) | writes `${workspaceFolder}/.vscode/mise-tools/<tool>` rather than an absolute `~/.local/share/mise/installs/…` path. Only the symlink form is shareable: an absolute install path is version-specific and home-directory-specific, so committing it hands every other developer a path that does not exist on their machine |
 | `configureExtensionsIncludeGlobalTools` | yes (`true`) | restricts configuration to tools the project's own `mise.toml` declares. The extension's own documentation calls `false` the recommended value, and the failure it prevents is visible in practice: a Nuxt repo declaring only `node` and `pnpm` acquired `metals.javaHome` and a `python.defaultInterpreterPath` pointing at a global mise interpreter, purely because those tools were in `~/.config/mise/config.toml` |
+| `configureExtensionsAutomaticallyIgnoreList` | yes (`["biomejs.biome", "oxc.oxc-vscode"]`) | excludes `ms-python.python`, whose generated value is *wrong* — see below. **The two defaults must be repeated**, because supplying the setting replaces the default array rather than extending it |
+
+The list ends up holding three entries for two unrelated reasons, which is worth spelling out so
+that a future reader does not "tidy" it back down to one.
+
+`biomejs.biome` and `oxc.oxc-vscode` are upstream's defaults. Both were added to the extension as
+deliberately opt-in integrations — its changelog says so outright, "biome extension support
+(disabled by default)" in 0.57.0 and "optional oxc-vscode support" in 1.8.0 — and the ignore list
+is the mechanism that makes them opt-in, since there is no separate enable flag. Keeping them is
+also right on the merits for any project that commits `settings.json`: both pass `useSymLinks:
+false` internally, so they write absolute `~/.local/share/mise/installs/…` paths *regardless* of
+`configureExtensionsUseSymLinks` above — exactly the un-shareable form that setting exists to
+avoid. `oxc.oxc-vscode` is the more aggressive of the two: it has a second registry entry keyed on
+`node`, so it fires for any project with `node` in `mise.toml` whether or not oxc is used at all.
+
+`ms-python.python` is excluded for a different reason: not opt-in, and not path shape, but a value
+that is incorrect. That is the one spelled out below.
 
 Because the symlinks are per-machine, **`.vscode/mise-tools/` must be in the committed
 `.gitignore`** — the extension's documentation makes this a condition of sharing the settings
 file at all. The [All Projects](project-setup.md#all-projects) rule applies unchanged: ignoring it
 only in `.git/info/exclude` looks like coverage to whoever set it up and gives none to anyone else.
 
-**This does not replace the explicit `.venv` pin above, and must not be read as doing so.** For
-`ms-python.python` the extension prefers mise's `VIRTUAL_ENV` and writes
-`${workspaceFolder}/.venv/bin/python` — the same value, so the two agree. But it *falls back* to
-the mise toolchain interpreter when `VIRTUAL_ENV` is absent, which is precisely the state of a
-fresh clone: the first `mise install` deliberately does not create `.venv` (see
-[Mise and uv](python-tooling.md#mise-and-uv)). Generated-only, that window writes a python with
-none of the project's dependencies into a committed file. Keeping `python.defaultInterpreterPath`
-written out by hand makes the generated value a confirmation rather than the sole source.
+**Exclude `ms-python.python` from it, and keep the explicit `.venv` pin above.** Generation is
+the wrong mechanism for that one extension, in two distinct ways.
+
+The first is that its generated value does not agree with the hand-written one. The extension
+prefers mise's `VIRTUAL_ENV` and writes it verbatim, with the workspace folder substituted —
+mise sets `VIRTUAL_ENV` to the environment *directory*, so what lands in `settings.json` is:
+
+```json
+"python.defaultInterpreterPath": "${workspaceFolder}/.venv"
+```
+
+not the `${workspaceFolder}/.venv/bin/python` pinned above. `ms-python.python` documents that key
+as "Path to default Python", so the interpreter path is the correct form and the generated one
+silently replaces it. Observed as an unexplained working-tree modification to a committed
+`settings.json` — the sort of edit nobody made, which is exactly how it goes unnoticed.
+
+The second is the fallback. When `VIRTUAL_ENV` is absent the extension writes the mise toolchain
+interpreter instead, which is precisely the state of a fresh clone: the first `mise install`
+deliberately does not create `.venv` (see [Mise and uv](python-tooling.md#mise-and-uv)). In that
+window, generation commits a python with none of the project's dependencies.
+
+Nothing is lost by excluding it. Generation exists for toolchains with no equivalent of `.venv`;
+Python already has one, pinned in two places that every consumer reads —
+`python.defaultInterpreterPath` here and `[tool.pyright]` in `pyproject.toml`.
 
 These settings do **not** isolate projects in a multi-root workspace — for that, see
 [Multi-root workspaces](#multi-root-workspaces) below.
