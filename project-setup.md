@@ -31,6 +31,44 @@ for uv, mise and packaging, and [ide.md](ide.md) for editor and Claude Code conf
   therefore a pair, not independent knobs: skipping the install means skipping the export. Nothing
   is lost, because a lock-regenerating workflow needs the mise binary and the config, not a tool
   environment.
+- **Give every workflow a concurrency group keyed per-sha on main and per-ref elsewhere.**
+
+  ```yaml
+  concurrency:
+    group: ${{ github.workflow }}-${{ github.ref == 'refs/heads/main' && format('main-{0}', github.event.workflow_run.head_sha || github.sha) || github.ref }}
+    cancel-in-progress: true
+  ```
+
+  A per-sha group on main means no push to main is ever cancelled, so every commit gets a
+  complete run; a per-ref group everywhere else means a new push supersedes the run still in
+  flight for that pull request or tag. `cancel-in-progress: true` is what does the cancelling,
+  and making the group unique per commit is what exempts main from it.
+
+  Two traps to avoid, both of which were live in these repos:
+
+  - **Do not interpolate `github.workflow` inside the `format()` as well as outside it.** The
+    group then comes out as `test-test-main-…`, and if both arms of the conditional also carry
+    a literal `-main-` infix, a pull request's group reads
+    `test-test-main-refs/pull/95/merge`. Harmless but misleading, and it makes the groups hard
+    to recognise in the API.
+  - **Prefer `github.event.workflow_run.head_sha` over `github.sha` for the main arm.** For a
+    `workflow_run` event GitHub sets `GITHUB_REF` to the default branch and `GITHUB_SHA` to the
+    *last commit on the default branch* — not the commit that triggered the run. Keying on
+    `github.sha` therefore drops every `workflow_run`-triggered run into a single group for as
+    long as the default branch head does not move, and `cancel-in-progress` kills the run
+    already going. The term is inert in workflows with no `workflow_run` trigger, so the same
+    expression can be used verbatim everywhere.
+
+  `actionlint` will not catch the second one: it validates expression syntax but treats
+  `github.event.*` as loosely typed, and exits 0 even on
+  `github.event.workflow_run.head_shaa`. Confirm payload property names against the
+  workflow-run object in the REST API instead.
+
+  Two exceptions worth keeping: a GitHub Pages deployment workflow wants a fixed
+  `group: pages` with `cancel-in-progress: false`, since a half-finished deploy should not be
+  interrupted, and a lock-regenerating workflow keyed on `github.ref` alone is fine because it
+  only ever runs on branches.
+
 - Set `timeout-minutes` on every job. Without it, a hung step (a stalled `apt-get`, a network call that never returns) runs until GitHub's 6-hour default before the job is killed, wasting CI minutes and delaying feedback. A tight job-level guard (e.g. `timeout-minutes: 10`, sized to the job) fails fast and legibly. Prefer a single job-level timeout over per-step timeouts: one guard covers the whole job with no per-step bookkeeping.
 
 ## All Projects
