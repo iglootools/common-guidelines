@@ -119,7 +119,7 @@ UV_PYTHON_PREFERENCE = "only-system"
 [settings]
 lockfile = true
 experimental = true            # required by `mise deps`
-python.uv_venv_auto = "create|source"
+python.uv_venv_auto = "source"     # creation is [deps.uv]'s job, not mise's
 
 [deps.uv]
 auto = true
@@ -132,13 +132,13 @@ run = "uv sync"                # add --all-extras if the project has extras
 | `experimental = true` in the committed `mise.toml` | `mise deps` is experimental, and relying on each developer exporting `MISE_EXPERIMENTAL` makes a fresh clone behave differently from CI | dependencies mysteriously do not install, with no error naming the cause |
 | `[deps.uv] auto = true` | runs `uv sync` before any `mise run`, gated on a blake3 hash of `uv.lock` + `pyproject.toml` and on `.venv` existing | every task needs a manual `install` first, or silently runs against a stale environment |
 | `[deps.uv] run = "..."` | the built-in command is a bare `uv sync`, which misses `--all-extras` | extras are absent from the dev environment. Note that overriding `run` **keeps** the built-in source hashing and `.venv` tracking — only `install_command()` reads it |
+| `python.uv_venv_auto = "source"`, not `"create\|source"` | mise's cookbook is explicit that with `[deps.uv]` enabled, creating the venv is the deps provider's job — keep the setting at `"source"`, enable `[deps.uv]`, and let `mise deps` create it | the two mechanisms collide. Measured on a fresh clone with `"create\|source"`, `mise install` announced `creating venv with uv at: …` and then failed on its own result: `error: Failed to create virtual environment / Caused by: A virtual environment already exists at: .venv`, then `WARN uv venv creation failed`. With `"source"` the same clone installs silently and the first `mise run` lets `[deps.uv]` create and populate `.venv` |
 | `UV_LOCKED: 1` in CI job env | asserts a sync will not change `uv.lock` | a stale lockfile is papered over by an implicit re-resolve on the runner. Prefer the environment variable over a `--locked` flag, so the `[deps.uv]` command stays identical locally and in CI and only the strictness differs |
 
-On a genuinely fresh clone, the first `mise install` warns `uv is required to create the venv
-… but is not installed` and does not create it — env directives resolve before the toolset is
-available. This is harmless: the first `mise run` invokes `[deps.uv]`, whose `uv sync` creates
-`.venv` itself. It does, however, mean nothing is on `PATH` for that first run, which is one of
-the two reasons for the next rule.
+A consequence of leaving creation to `[deps.uv]` is that on a genuinely fresh clone `.venv` does
+not exist until the first `mise run` — `mise install` alone does not create it. That is by design
+rather than a gap, but it means nothing is on `PATH` for that first run, which is one of the two
+reasons for the next rule.
 
 ### Invoke tools through `uv run --no-sync <tool>` in mise tasks, not bare
 
