@@ -31,7 +31,12 @@ for uv, mise and packaging, and [ide.md](ide.md) for editor and Claude Code conf
   therefore a pair, not independent knobs: skipping the install means skipping the export. Nothing
   is lost, because a lock-regenerating workflow needs the mise binary and the config, not a tool
   environment.
-- **Give every workflow a concurrency group keyed per-sha on main and per-ref elsewhere.**
+- **Give every workflow a concurrency group, and pick the variant by what the workflow
+  does.** There are two, and the difference is whether cancelling a run half-done is
+  acceptable.
+
+  For anything that only reads and reports — test, lint, link-check, build — supersede the
+  run in flight:
 
   ```yaml
   concurrency:
@@ -43,6 +48,22 @@ for uv, mise and packaging, and [ide.md](ide.md) for editor and Claude Code conf
   complete run; a per-ref group everywhere else means a new push supersedes the run still in
   flight for that pull request or tag. `cancel-in-progress: true` is what does the cancelling,
   and making the group unique per commit is what exempts main from it.
+
+  For anything that mutates state outside the repository — publishing to a package index,
+  creating tags or releases, deploying — queue instead of cancelling:
+
+  ```yaml
+  concurrency:
+    group: ${{ github.workflow }}
+    cancel-in-progress: false
+  ```
+
+  These runs are neither idempotent nor reversible, so a half-finished one is the worst
+  outcome available; waiting is cheap by comparison. The key deliberately carries no ref or
+  sha, so two runs cannot overlap even when they carry different ones — a publish workflow
+  reachable by tag push, by `workflow_run`, and by manual dispatch can have more than one
+  trigger aiming at the same version. Note that GitHub keeps at most one run *pending* per
+  group: a third arrival supersedes the pending run, never the running one.
 
   Two traps to avoid, both of which were live in these repos:
 
@@ -64,10 +85,10 @@ for uv, mise and packaging, and [ide.md](ide.md) for editor and Claude Code conf
   `github.event.workflow_run.head_shaa`. Confirm payload property names against the
   workflow-run object in the REST API instead.
 
-  Two exceptions worth keeping: a GitHub Pages deployment workflow wants a fixed
-  `group: pages` with `cancel-in-progress: false`, since a half-finished deploy should not be
-  interrupted, and a lock-regenerating workflow keyed on `github.ref` alone is fine because it
-  only ever runs on branches.
+  Two established spellings of the queueing variant are worth recognising rather than
+  "fixing": a GitHub Pages deployment uses the fixed `group: pages`, which is the documented
+  convention for that action, and a lock-regenerating workflow keyed on `github.ref` alone is
+  fine because it only ever runs on branches and one run per branch is the point.
 
 - Set `timeout-minutes` on every job. Without it, a hung step (a stalled `apt-get`, a network call that never returns) runs until GitHub's 6-hour default before the job is killed, wasting CI minutes and delaying feedback. A tight job-level guard (e.g. `timeout-minutes: 10`, sized to the job) fails fast and legibly. Prefer a single job-level timeout over per-step timeouts: one guard covers the whole job with no per-step bookkeeping.
 
