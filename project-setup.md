@@ -31,6 +31,65 @@ for uv, mise and packaging, and [ide.md](ide.md) for editor and Claude Code conf
   therefore a pair, not independent knobs: skipping the install means skipping the export. Nothing
   is lost, because a lock-regenerating workflow needs the mise binary and the config, not a tool
   environment.
+- **Give every workflow a concurrency group, and pick the variant by what the workflow
+  does.** There are two, and the difference is whether cancelling a run half-done is
+  acceptable.
+
+  For anything that only reads and reports — test, lint, link-check, build — supersede the
+  run in flight:
+
+  ```yaml
+  concurrency:
+    group: ${{ github.workflow }}-${{ github.ref == 'refs/heads/main' && format('main-{0}', github.event.workflow_run.head_sha || github.sha) || github.ref }}
+    cancel-in-progress: true
+  ```
+
+  A per-sha group on main means no push to main is ever cancelled, so every commit gets a
+  complete run; a per-ref group everywhere else means a new push supersedes the run still in
+  flight for that pull request or tag. `cancel-in-progress: true` is what does the cancelling,
+  and making the group unique per commit is what exempts main from it.
+
+  For anything that mutates state outside the repository — publishing to a package index,
+  creating tags or releases, deploying — queue instead of cancelling:
+
+  ```yaml
+  concurrency:
+    group: ${{ github.workflow }}
+    cancel-in-progress: false
+  ```
+
+  These runs are neither idempotent nor reversible, so a half-finished one is the worst
+  outcome available; waiting is cheap by comparison. The key deliberately carries no ref or
+  sha, so two runs cannot overlap even when they carry different ones — a publish workflow
+  reachable by tag push, by `workflow_run`, and by manual dispatch can have more than one
+  trigger aiming at the same version. Note that GitHub keeps at most one run *pending* per
+  group: a third arrival supersedes the pending run, never the running one.
+
+  Two traps to avoid, both of which were live in these repos:
+
+  - **Do not interpolate `github.workflow` inside the `format()` as well as outside it.** The
+    group then comes out as `test-test-main-…`, and if both arms of the conditional also carry
+    a literal `-main-` infix, a pull request's group reads
+    `test-test-main-refs/pull/95/merge`. Harmless but misleading, and it makes the groups hard
+    to recognise in the API.
+  - **Prefer `github.event.workflow_run.head_sha` over `github.sha` for the main arm.** For a
+    `workflow_run` event GitHub sets `GITHUB_REF` to the default branch and `GITHUB_SHA` to the
+    *last commit on the default branch* — not the commit that triggered the run. Keying on
+    `github.sha` therefore drops every `workflow_run`-triggered run into a single group for as
+    long as the default branch head does not move, and `cancel-in-progress` kills the run
+    already going. The term is inert in workflows with no `workflow_run` trigger, so the same
+    expression can be used verbatim everywhere.
+
+  `actionlint` will not catch the second one: it validates expression syntax but treats
+  `github.event.*` as loosely typed, and exits 0 even on
+  `github.event.workflow_run.head_shaa`. Confirm payload property names against the
+  workflow-run object in the REST API instead.
+
+  Two established spellings of the queueing variant are worth recognising rather than
+  "fixing": a GitHub Pages deployment uses the fixed `group: pages`, which is the documented
+  convention for that action, and a lock-regenerating workflow keyed on `github.ref` alone is
+  fine because it only ever runs on branches and one run per branch is the point.
+
 - Set `timeout-minutes` on every job. Without it, a hung step (a stalled `apt-get`, a network call that never returns) runs until GitHub's 6-hour default before the job is killed, wasting CI minutes and delaying feedback. A tight job-level guard (e.g. `timeout-minutes: 10`, sized to the job) fails fast and legibly. Prefer a single job-level timeout over per-step timeouts: one guard covers the whole job with no per-step bookkeeping.
 
 ## All Projects
