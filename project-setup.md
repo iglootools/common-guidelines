@@ -31,12 +31,18 @@ for uv, mise and packaging, and [ide.md](ide.md) for editor and Claude Code conf
   therefore a pair, not independent knobs: skipping the install means skipping the export. Nothing
   is lost, because a lock-regenerating workflow needs the mise binary and the config, not a tool
   environment.
-- **Give every workflow a concurrency group, and pick the variant by what the workflow
-  does.** There are two, and the difference is whether cancelling a run half-done is
-  acceptable.
+- **Give every workflow a concurrency group, and pick the variant by whether a half-finished
+  run can be abandoned and redone.** There are two. The test is not whether the workflow writes
+  to something outside the repository — plenty of external writes are perfectly safe to
+  cancel — but whether killing it partway leaves state that a later run cannot simply redo from
+  scratch.
 
-  For anything that only reads and reports — test, lint, link-check, build — supersede the
-  run in flight:
+  Supersede the run in flight whenever abandoning it costs nothing but the compute already
+  spent. That covers anything that only reads and reports — test, lint, link-check, build — and
+  equally anything that writes somewhere re-writable: a container tag or docs site the next run
+  overwrites wholesale, a preview or dev environment rebuilt from scratch on every deploy. The
+  external write is not the problem; a cancelled run there leaves nothing that re-running does
+  not replace.
 
   ```yaml
   concurrency:
@@ -49,8 +55,7 @@ for uv, mise and packaging, and [ide.md](ide.md) for editor and Claude Code conf
   flight for that pull request or tag. `cancel-in-progress: true` is what does the cancelling,
   and making the group unique per commit is what exempts main from it.
 
-  For anything that mutates state outside the repository — publishing to a package index,
-  creating tags or releases, deploying — queue instead of cancelling:
+  Queue instead when a partial run leaves state the next run cannot repair:
 
   ```yaml
   concurrency:
@@ -58,12 +63,20 @@ for uv, mise and packaging, and [ide.md](ide.md) for editor and Claude Code conf
     cancel-in-progress: false
   ```
 
-  These runs are neither idempotent nor reversible, so a half-finished one is the worst
-  outcome available; waiting is cheap by comparison. The key deliberately carries no ref or
-  sha, so two runs cannot overlap even when they carry different ones — a publish workflow
-  reachable by tag push, by `workflow_run`, and by manual dispatch can have more than one
-  trigger aiming at the same version. Note that GitHub keeps at most one run *pending* per
-  group: a third arrival supersedes the pending run, never the running one.
+  Publishing to PyPI is the clearest case: uploaded files are immutable, and a deleted filename
+  cannot be re-uploaded, so a run cancelled between two artifact uploads leaves that version
+  permanently half-populated — the only way out is burning a version number. A deployment
+  cancelled mid-rollout leaves part of the fleet on the new build and the rest on the old, which
+  no re-run reconstructs because it cannot know how far the killed run got. Creating tags or
+  releases is the same shape. What these share is not that the write is external but that it is
+  not replayable: the second attempt cannot start from a clean slate. Waiting is cheap by
+  comparison.
+
+  The key deliberately carries no ref or sha, so two runs cannot overlap even when they carry
+  different ones — a publish workflow reachable by tag push, by `workflow_run`, and by manual
+  dispatch can have more than one trigger aiming at the same version. Note that GitHub keeps at
+  most one run *pending* per group: a third arrival supersedes the pending run, never the
+  running one.
 
   Two traps to avoid, both of which were live in these repos:
 
