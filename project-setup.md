@@ -31,6 +31,23 @@ for uv, mise and packaging, and [ide.md](ide.md) for editor and Claude Code conf
   therefore a pair, not independent knobs: skipping the install means skipping the export. Nothing
   is lost, because a lock-regenerating workflow needs the mise binary and the config, not a tool
   environment.
+- **Name every workflow after its own file.** `name: test` in `test.yml`, `name:
+  renovate-mise-lock` in `renovate-mise-lock.yml` — the filename's stem, verbatim, kebab-case
+  included. GitHub exposes both identifiers and neither one substitutes for the other: the
+  status-badge URL, the REST `/actions/workflows/{file}` endpoint, and `gh workflow run` address
+  a workflow by filename, while the Actions UI, the `workflows:` list of a `workflow_run`
+  trigger, and `${{ github.workflow }}` address it by name. Letting them diverge means holding
+  a mapping between the two in your head every time you read a badge, a trigger, or a run
+  listing.
+
+  Two failures make this more than tidiness. A workflow with no `name:` at all gets
+  `github.workflow` set to its *path*, so the concurrency group below silently changes shape
+  — matching the filename keeps the group readable whether or not the key is set. And two
+  workflows that share a `name:` share a `github.workflow`, which puts them in the *same*
+  concurrency group: with `cancel-in-progress: true` they cancel each other, for no reason
+  visible in either file. Filenames cannot collide within a directory, so deriving the name
+  from the file makes that collision impossible by construction.
+
 - **Give every workflow a concurrency group, and pick the variant by whether a half-finished
   run can be abandoned and redone.** There are two. The test is not whether the workflow writes
   to something outside the repository — plenty of external writes are perfectly safe to
