@@ -15,6 +15,38 @@ for uv, mise and packaging, and [ide.md](ide.md) for editor and Claude Code conf
     version that already carries `.dev0` produces two dev segments and is invalid PEP 440 — a bug
     that stays hidden as long as the workflow is only ever dispatched from a tag. Reading the tag
     (`git describe --tags --abbrev=0`) avoids it and needs no build tool.
+- **Pin the mise version in every `jdx/mise-action` step.** With no `version:` input the action
+  installs the latest release, so a workflow's toolchain resolver changes underneath it on
+  whatever night mise ships — and `mise.lock` does not cover this, because mise is the thing
+  reading the lock, not an entry in it. Pin it to the version `[tools]` was locked with locally:
+
+  ```yaml
+  - uses: jdx/mise-action@v4
+    with:
+      # renovate: datasource=github-releases depName=jdx/mise
+      version: 2026.8.10
+  ```
+
+  The marker comment is not decoration — it is the pin's updater. Renovate's `github-actions`
+  manager rewrites `uses:` refs and reads no action *inputs*, so a bare `version:` is exactly the
+  pin nothing updates that [coding.md](coding.md) warns about. Pair it with a `customManagers`
+  entry keyed on the marker rather than on the `version:` line alone, which would also match
+  every other action that happens to take a `version:` input:
+
+  ```json
+  {
+    "customType": "regex",
+    "managerFilePatterns": ["/^\\.github/workflows/.+\\.ya?ml$/"],
+    "matchStrings": [
+      "# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>\\S+)\\s+version: (?<currentValue>\\S+)"
+    ],
+    "extractVersionTemplate": "^v?(?<version>.+)$"
+  }
+  ```
+
+  `extractVersionTemplate` is what reconciles the two spellings: mise tags releases `vYYYY.M.PATCH`
+  while the action's input wants the bare version.
+
 - **Prefer tools whose mise backend is lockable.** Check with `mise registry <tool>`: a backend
   such as `aqua:` records per-platform URLs and checksums in `mise.lock`, while `vfox:` records
   none, and `mise lock` cannot generate them. An unlockable tool makes `mise install --locked`
