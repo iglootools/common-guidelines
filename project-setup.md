@@ -15,6 +15,33 @@ for uv, mise and packaging, and [ide.md](ide.md) for editor and Claude Code conf
     version that already carries `.dev0` produces two dev segments and is invalid PEP 440 — a bug
     that stays hidden as long as the workflow is only ever dispatched from a tag. Reading the tag
     (`git describe --tags --abbrev=0`) avoids it and needs no build tool.
+- **Pin every action to a full commit SHA, with the tag in a trailing comment.** A tag is a
+  mutable pointer: whoever controls the action's repository can repoint `v4` at new code, and
+  every workflow that references it picks that code up on the next run with no diff anywhere in
+  your repository to review. A branch ref such as `pypa/gh-action-pypi-publish@release/v1` is
+  worse still, since moving is what a branch is *for*. A commit SHA is the only ref that cannot
+  be repointed under you.
+
+  ```yaml
+  - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+  ```
+
+  The trailing comment is not a courtesy to the reader — it is what Renovate reads to learn which
+  version the SHA stands for, and therefore what makes the pin updatable rather than frozen. Two
+  configuration knobs have to go with it, and both fail quietly if you skip them:
+
+  - **`helpers:pinGitHubActionDigests` in `extends`.** It sets `pinDigests` for the
+    `github-actions` manager, so an action added later as `@v1` gets a pin PR instead of sitting
+    unpinned. It ships in `config:best-practices`, *not* `config:recommended`, so inheriting the
+    latter does not give it to you. Without it, a one-time sweep decays one new workflow at a time.
+  - **`minimumReleaseAgeBehaviour: "timestamp-optional"`.** `minimumReleaseAge` applies to digest
+    updates too, and when Renovate cannot date one it treats it as pending *forever* under the
+    default `timestamp-required`. That is precisely the case for a ref that is not a version — the
+    `release/v1` branch above — so the delay meant to slow adoption down instead stops it
+    permanently, and the pin you added for supply-chain reasons becomes the stalest thing in the
+    file. `timestamp-optional` keeps the delay wherever a release timestamp exists and lets the
+    undatable updates through.
+
 - **Pin the mise version in every `jdx/mise-action` step.** With no `version:` input the action
   installs the latest release, so a workflow's toolchain resolver changes underneath it on
   whatever night mise ships — and `mise.lock` does not cover this, because mise is the thing
